@@ -7,6 +7,16 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
+        ueb: {
+          bordeaux: '#8A1538',
+          'bordeaux-dark': '#6E1029',
+          'bordeaux-light': '#A91D42',
+          navy: '#1B2A4A',
+          'navy-light': '#27395E',
+          gold: '#C9A227',
+          'gold-light': '#E4C65B',
+          cream: '#FAF7F0',
+        },
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',

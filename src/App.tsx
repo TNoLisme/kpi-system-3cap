@@ -10,11 +10,20 @@ import { SelfAssessment } from '@/components/modules/SelfAssessment';
 import { ApprovalManagement } from '@/components/modules/ApprovalManagement';
 import { AdminClassification } from '@/components/modules/AdminClassification';
 import { ComplaintModule } from '@/components/modules/ComplaintModule';
+import { LandingPage } from '@/components/landing/LandingPage';
 
 function AppContent() {
+  const [view, setView] = useState<'landing' | 'app'>('landing');
   const [role, setRole] = useState<Role>('chuyen-vien');
   const [page, setPage] = useState<PageKey>('dashboard');
   const [period, setPeriod] = useState(CURRENT_PERIOD);
+
+  const handleEnterDemo = (target?: PageKey) => {
+    if (target) setPage(target);
+    setView('app');
+  };
+
+  const handleGoLanding = () => setView('landing');
 
   const handleRoleChange = (newRole: Role) => {
     setRole(newRole);
@@ -43,9 +52,13 @@ function AppContent() {
     }
   };
 
+  if (view === 'landing') {
+    return <LandingPage onEnterDemo={handleEnterDemo} />;
+  }
+
   return (
     <div className="flex min-h-screen bg-neutral-100">
-      <Sidebar role={role} activePage={page} onPageChange={setPage} />
+      <Sidebar role={role} activePage={page} onPageChange={setPage} onGoLanding={handleGoLanding} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           user={CURRENT_USER}

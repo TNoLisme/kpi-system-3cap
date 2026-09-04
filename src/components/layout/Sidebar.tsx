@@ -11,6 +11,7 @@ interface SidebarProps {
   role: Role;
   activePage: PageKey;
   onPageChange: (page: PageKey) => void;
+  onGoLanding?: () => void;
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -26,7 +27,7 @@ const PAGE_LABELS: Record<PageKey, { label: string; icon: string }> = {
   'complaint': { label: 'Khiếu nại', icon: 'MessageSquareWarning' },
 };
 
-export function Sidebar({ role, activePage, onPageChange }: SidebarProps) {
+export function Sidebar({ role, activePage, onPageChange, onGoLanding }: SidebarProps) {
   const { state } = useKpiStore();
   const config = ROLE_CONFIGS.find(r => r.role === role)!;
   const pages = config.pages;
@@ -34,7 +35,12 @@ export function Sidebar({ role, activePage, onPageChange }: SidebarProps) {
   return (
     <aside className="w-64 bg-white border-r border-neutral-200 flex flex-col h-screen sticky top-0 flex-shrink-0">
       <div className="px-5 py-5 border-b border-neutral-200">
-        <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onGoLanding}
+          title={onGoLanding ? 'Về trang giới thiệu' : undefined}
+          className="flex items-center gap-2.5 text-left rounded-lg"
+        >
           <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center flex-shrink-0">
             <Award size={20} className="text-white" />
           </div>
@@ -42,7 +48,7 @@ export function Sidebar({ role, activePage, onPageChange }: SidebarProps) {
             <h1 className="text-sm font-bold text-neutral-900 leading-tight">Hệ Thống KPI</h1>
             <p className="text-xs text-neutral-500">Đánh giá & Xếp loại 3 Cấp</p>
           </div>
-        </div>
+        </button>
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">

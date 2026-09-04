@@ -119,6 +119,43 @@
     text-wrap: balance;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+  }
+
+  .reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .btn-ueb-glow {
+    box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.55);
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  .btn-ueb-glow:hover {
+    box-shadow: 0 0 24px 4px rgba(201, 162, 39, 0.55);
+    transform: translateY(-1px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
   }
