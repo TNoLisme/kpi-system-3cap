@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { type Role, type User, type Notification } from '@/types';
+import { type User, type Role, type Notification } from '@/types';
 import { ROLE_CONFIGS, PERIODS, NOTIFICATIONS } from '@/data/mockData';
-import { Bell, Calendar, ChevronDown, Check, AlertTriangle, XCircle, Info, CheckCheck } from 'lucide-react';
+import {
+  Bell, ChevronDown, Calendar, Check, XCircle, AlertTriangle, Info,
+  CheckCheck, Snowflake,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/Primitives';
+import { useKpiStore } from '@/store/KpiStore';
 
 interface HeaderProps {
   user: User;
@@ -18,7 +23,18 @@ const NOTIF_ICONS = {
   info: <Info size={16} className="text-primary-600" />,
 };
 
-export function Header({ user, role, onRoleChange, period, onPeriodChange }: HeaderProps) {
+// Danh tính đại diện tương ứng từng vai trò demo
+const ROLE_USER_MAP: Record<Role, { name: string; position: string; unit: string }> = {
+  'chuyen-vien': { name: 'Nguyễn Văn An', position: 'Chuyên viên', unit: 'Phòng Đào tạo' },
+  'giang-vien': { name: 'TS. Phạm Thu Dung', position: 'Giảng viên', unit: 'Khoa Du lịch' },
+  'truong-khoa': { name: 'PGS.TS. Trần Văn Quản Lý', position: 'Trưởng Khoa', unit: 'Khoa Du lịch' },
+  'lanh-dao': { name: 'ThS. Lê Hoàng Lãnh Đạo', position: 'Trưởng phòng TCNS', unit: 'Phòng TCNS' },
+  'ban-giam-hieu': { name: 'GS.TS. Hiệu Trưởng', position: 'Hiệu trưởng', unit: 'Ban Giám Hiệu' },
+  'thanh-tra': { name: 'ThS. Nguyễn Thanh Tra', position: 'Thanh tra viên', unit: 'Phòng Thanh tra' },
+};
+
+export function Header({ role, onRoleChange, period, onPeriodChange }: HeaderProps) {
+  const { state } = useKpiStore();
   const [showNotif, setShowNotif] = useState(false);
   const [showRole, setShowRole] = useState(false);
   const [showPeriod, setShowPeriod] = useState(false);
@@ -40,6 +56,7 @@ export function Header({ user, role, onRoleChange, period, onPeriodChange }: Hea
   const unreadCount = notifications.filter(n => !n.read).length;
   const currentRoleConfig = ROLE_CONFIGS.find(r => r.role === role)!;
   const currentPeriod = PERIODS.find(p => p.value === period);
+  const currentProfile = ROLE_USER_MAP[role] || ROLE_USER_MAP['chuyen-vien'];
 
   const markAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -51,9 +68,16 @@ export function Header({ user, role, onRoleChange, period, onPeriodChange }: Hea
 
   return (
     <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6 sticky top-0 z-30">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">{currentRoleConfig.label}</h2>
-        <p className="text-xs text-neutral-500">Hệ thống đánh giá KPI 3 cấp</p>
+      <div className="flex items-center gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-neutral-900">{currentRoleConfig.label}</h2>
+          <p className="text-xs text-neutral-500">{currentProfile.unit} • {currentProfile.position}</p>
+        </div>
+        {state.isFrozen && (
+          <Badge variant="blue">
+            <Snowflake size={13} className="mr-1 inline" /> DỮ LIỆU ĐÃ ĐÓNG BĂNG
+          </Badge>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -64,7 +88,7 @@ export function Header({ user, role, onRoleChange, period, onPeriodChange }: Hea
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-300 hover:border-neutral-400 transition-colors text-sm"
           >
             <Calendar size={16} className="text-neutral-500" />
-            <span className="text-neutral-700 font-medium">{currentPeriod?.label || 'Chọn kỳ'}</span>
+            <span className="text-neutral-700 font-medium">{currentPeriod?.label || state.period}</span>
             <ChevronDown size={14} className={`text-neutral-400 transition-transform ${showPeriod ? 'rotate-180' : ''}`} />
           </button>
           {showPeriod && (
@@ -138,10 +162,10 @@ export function Header({ user, role, onRoleChange, period, onPeriodChange }: Hea
             className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
           >
             <div className="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-semibold">
-              {user.name.charAt(0)}
+              {currentProfile.name.charAt(0)}
             </div>
             <div className="text-left">
-              <p className="text-sm font-semibold text-neutral-800 leading-tight">{user.name}</p>
+              <p className="text-sm font-semibold text-neutral-800 leading-tight">{currentProfile.name}</p>
               <p className="text-xs text-neutral-500">{currentRoleConfig.label}</p>
             </div>
             <ChevronDown size={14} className={`text-neutral-400 transition-transform ${showRole ? 'rotate-180' : ''}`} />

@@ -5,6 +5,7 @@ import {
   User, GraduationCap, Users, Building2, ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
+import { useKpiStore } from '@/store/KpiStore';
 
 interface SidebarProps {
   role: Role;
@@ -26,6 +27,7 @@ const PAGE_LABELS: Record<PageKey, { label: string; icon: string }> = {
 };
 
 export function Sidebar({ role, activePage, onPageChange }: SidebarProps) {
+  const { state } = useKpiStore();
   const config = ROLE_CONFIGS.find(r => r.role === role)!;
   const pages = config.pages;
 
@@ -38,13 +40,13 @@ export function Sidebar({ role, activePage, onPageChange }: SidebarProps) {
           </div>
           <div>
             <h1 className="text-sm font-bold text-neutral-900 leading-tight">Hệ Thống KPI</h1>
-            <p className="text-xs text-neutral-500">Đánh giá & Xếp loại</p>
+            <p className="text-xs text-neutral-500">Đánh giá & Xếp loại 3 Cấp</p>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <p className="px-3 mb-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">Menu</p>
+        <p className="px-3 mb-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">Menu chức năng</p>
         <div className="flex flex-col gap-1">
           {pages.map(pageKey => {
             const page = PAGE_LABELS[pageKey];
@@ -66,8 +68,8 @@ export function Sidebar({ role, activePage, onPageChange }: SidebarProps) {
 
       <div className="px-3 py-4 border-t border-neutral-200">
         <div className="px-3 py-2.5 rounded-lg bg-neutral-50">
-          <p className="text-xs text-neutral-500 mb-1">Kỳ đánh giá hiện tại</p>
-          <p className="text-sm font-semibold text-neutral-700">Quý 3 / 2026</p>
+          <p className="text-xs text-neutral-500 mb-1">Kỳ đánh giá</p>
+          <p className="text-sm font-semibold text-neutral-700">{state.period || 'Quý 3 / 2026'}</p>
         </div>
       </div>
     </aside>

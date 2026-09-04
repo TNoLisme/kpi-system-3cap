@@ -10,7 +10,6 @@ interface GaugeChartProps {
 
 export function GaugeChart({ value, max, label, size = 200 }: GaugeChartProps) {
   const pct = Math.min(1, value / max);
-  const angle = -90 + pct * 180;
   const radius = size / 2 - 20;
   const cx = size / 2;
   const cy = size / 2;

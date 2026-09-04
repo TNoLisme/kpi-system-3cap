@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { type Role, type PageKey } from '@/types';
 import { ROLE_CONFIGS, CURRENT_USER, CURRENT_PERIOD } from '@/data/mockData';
 import { ToastProvider } from '@/components/ui/Toast';
+import { KpiStoreProvider } from '@/store/KpiStore';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { Dashboard } from '@/components/dashboard/Dashboard';
@@ -32,7 +33,7 @@ function AppContent() {
       case 'self-assessment':
         return <SelfAssessment role={role} />;
       case 'approval':
-        return <ApprovalManagement />;
+        return <ApprovalManagement role={role} />;
       case 'admin-classification':
         return <AdminClassification />;
       case 'complaint':
@@ -64,7 +65,9 @@ function AppContent() {
 export default function App() {
   return (
     <ToastProvider>
-      <AppContent />
+      <KpiStoreProvider>
+        <AppContent />
+      </KpiStoreProvider>
     </ToastProvider>
   );
 }

@@ -1,4 +1,4 @@
-export type Role =
+﻿export type Role =
   | 'chuyen-vien'
   | 'giang-vien'
   | 'truong-khoa'
@@ -13,9 +13,18 @@ export type PageKey =
   | 'admin-classification'
   | 'complaint';
 
-export type TicketStatus = 'draft' | 'pending-l1' | 'pending-l2' | 'approved' | 'rejected';
+export type TicketStatus =
+  | 'draft'
+  | 'pending-l1'
+  | 'pending-l2'
+  | 'revision-requested'
+  | 'pending-l3'
+  | 'pending-council'
+  | 'approved'
+  | 'rejected'
+  | 'frozen';
 
-export type Classification = 'A1' | 'A2' | 'B1' | 'B2' | 'C' | 'D';
+export type Classification = 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'B3' | 'C' | 'D';
 
 export type ProductStatus = 'cho-duyet' | 'da-duyet' | 'yeu-cau-sua';
 
@@ -36,6 +45,7 @@ export interface User {
 
 export interface ProductItem {
   id: string;
+  userId?: string;
   category: string;
   categoryCode: string;
   contribution: number;
@@ -47,6 +57,22 @@ export interface ProductItem {
   actualScore?: number;
   revisionFeedback?: string;
   revisionFrom?: string;
+}
+
+export interface ApprovalEvent {
+  id: string;
+  action:
+    | 'submitted'
+    | 'revision-requested'
+    | 'resubmitted'
+    | 'approved-l2'
+    | 'approved-l3'
+    | 'approved-council'
+    | 'frozen';
+  actor: string;
+  role: Role;
+  at: string;
+  note?: string;
 }
 
 export interface AssessmentTicket {
@@ -65,6 +91,12 @@ export interface AssessmentTicket {
   flagCeiling: boolean;
   classification: Classification | null;
   roundedScore: number | null;
+  revisionReason?: string;
+  innovationCtPoints: number;
+  innovationUnits: number;
+  approvalHistory: ApprovalEvent[];
+  ceiling?: Classification;
+  ceilingReasons?: string[];
 }
 
 export interface ViolationRecord {
@@ -98,20 +130,25 @@ export interface UnitSummary {
   };
   classificationDistribution: { classification: Classification; count: number }[];
   kpiProgress: number;
+  kpiActualGrowth?: number;
   kpiStatus: 'on-track' | 'at-risk' | 'delayed';
   flagCount: number;
+  kpiCeiling?: Classification | null;
+  ceilingReason?: string;
 }
 
-export interface Notification {
-  id: string;
-  type: 'approval' | 'rejected' | 'warning' | 'info';
-  message: string;
-  time: string;
-  read: boolean;
+export interface ComplaintResolution {
+  level: 1 | 2;
+  decision: 'reject' | 'adjust';
+  conclusion: string;
+  scoreAdjustment: number;
+  resolvedAt: string;
 }
 
 export interface Complaint {
   id: string;
+  userId?: string;
+  ticketId?: string;
   complainant: string;
   unit: string;
   type: string;
@@ -119,11 +156,13 @@ export interface Complaint {
   evidenceName: string | null;
   status: ComplaintStatus;
   submittedDate: string;
+  responseDueDate?: string;
   assignedTo: string | null;
   resolution?: string;
   resolutionType?: 'reject' | 'adjust';
   scoreAdjustment?: number;
   resolvedDate?: string;
+  resolutionHistory?: ComplaintResolution[];
 }
 
 export interface CompetencyAxis {
@@ -152,3 +191,5 @@ export interface RoleConfig {
   pages: PageKey[];
   defaultPage: PageKey;
 }
+
+export type Notification = NotificationItem;

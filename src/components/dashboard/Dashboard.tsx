@@ -18,7 +18,7 @@ export function Dashboard({ role, onNavigate }: DashboardProps) {
     case 'truong-khoa':
       return <ManagerDashboard onNavigate={onNavigate} />;
     case 'lanh-dao':
-      return <UnitDashboard />;
+      return <UnitDashboard role={role} />;
     case 'ban-giam-hieu':
       return <StrategyDashboard />;
     case 'thanh-tra':

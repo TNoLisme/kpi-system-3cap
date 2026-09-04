@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, SectionTitle, Badge, Select } from '@/components/ui/Primitives';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import {
   MessageSquareWarning, Upload, Send, FileText, Clock, CheckCircle2,
-  AlertCircle, Lock, Gavel, X, Plus,
+  AlertCircle, Lock, Gavel, Plus, Check,
 } from 'lucide-react';
-import { type Complaint, type ComplaintStatus } from '@/types';
-import { COMPLAINTS, COMPLAINT_TYPES } from '@/data/mockData';
+import { type Complaint, type ComplaintStatus, type ComplaintResolution } from '@/types';
+import { COMPLAINT_TYPES, CURRENT_USER, DEMO_CURRENT_DATE } from '@/data/mockData';
+import { useKpiStore } from '@/store/KpiStore';
 
 interface Props {
   isUserComplaint?: boolean;
@@ -15,83 +16,113 @@ interface Props {
 
 export function ComplaintModule({ isUserComplaint = false }: Props) {
   const { showToast } = useToast();
+  const { state, dispatch } = useKpiStore();
+
   const [showForm, setShowForm] = useState(false);
   const [complaintType, setComplaintType] = useState('');
   const [complaintReason, setComplaintReason] = useState('');
   const [evidenceName, setEvidenceName] = useState('');
-  const [complaints, setComplaints] = useState<Complaint[]>(COMPLAINTS);
   const [processingComplaint, setProcessingComplaint] = useState<Complaint | null>(null);
   const [resolution, setResolution] = useState('');
-  const [resolutionType, setResolutionType] = useState<'reject' | 'adjust'>('reject');
-  const [scoreAdjustment, setScoreAdjustment] = useState(0);
+  const [resolutionType, setResolutionType] = useState<'reject' | 'adjust'>('adjust');
+  const [scoreAdjustment, setScoreAdjustment] = useState(5);
 
-  const currentDate = new Date('2026-09-03');
-  const deadline = new Date('2026-10-15');
-  const canComplain = currentDate <= deadline;
+  // Mốc thời hạn khiếu nại: ngày 15 của tháng công bố kết quả (15/10/2026)
+  const deadline = new Date('2026-10-15T23:59:59');
+  const currentDate = new Date(DEMO_CURRENT_DATE || '2026-10-10');
+  const remainingDays = Math.max(0, Math.ceil((deadline.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const canComplain = remainingDays > 0;
+
+  // Lọc danh sách: nếu là màn cá nhân thì chỉ hiện khiếu nại của chính mình
+  const complaints = useMemo(() => {
+    if (isUserComplaint) {
+      return state.complaints.filter(c => c.complainant === CURRENT_USER.name || c.userId === CURRENT_USER.id);
+    }
+    return state.complaints;
+  }, [state.complaints, isUserComplaint]);
 
   const handleSubmit = () => {
     if (!complaintType || !complaintReason.trim()) {
-      showToast('error', 'Vui lòng chọn loại khiếu nại và nhập lý do');
+      showToast('error', 'Vui lòng chọn loại khiếu nại và nêu rõ lý do');
       return;
     }
+    if (!evidenceName.trim()) {
+      showToast('error', 'Vui lòng đính kèm tên file hoặc liên kết tài liệu minh chứng');
+      return;
+    }
+
     const newComplaint: Complaint = {
-      id: `c${Date.now()}`,
-      complainant: 'Nguyễn Văn An',
-      unit: 'Phòng Đào tạo',
+      id: `c00${state.complaints.length + 1}`,
+      userId: CURRENT_USER.id,
+      ticketId: 't001',
+      complainant: CURRENT_USER.name,
+      unit: CURRENT_USER.unit,
       type: complaintType,
-      reason: complaintReason,
-      evidenceName: evidenceName || null,
+      reason: complaintReason.trim(),
+      evidenceName: evidenceName.trim(),
       status: 'mo',
-      submittedDate: '2026-09-03',
+      submittedDate: DEMO_CURRENT_DATE || '2026-10-10',
+      responseDueDate: '2026-10-12', // SLA 02 ngày làm việc
       assignedTo: null,
     };
-    setComplaints(prev => [newComplaint, ...prev]);
-    showToast('success', 'Đã gửi khiếu nại đến Phòng Thanh tra');
+
+    dispatch({ type: 'CREATE_COMPLAINT', complaint: newComplaint });
+    showToast('success', 'Đã nộp đơn khiếu nại thành công - Đơn đã chuyển đến Phòng Thanh tra (SLA: 02 ngày)');
     setShowForm(false);
     setComplaintType('');
     setComplaintReason('');
     setEvidenceName('');
   };
 
-  const handleProcessComplaint = () => {
+  const handleStartProcess = (c: Complaint) => {
+    dispatch({
+      type: 'START_COMPLAINT',
+      complaintId: c.id,
+      actor: CURRENT_USER,
+    });
+    setProcessingComplaint(c);
+  };
+
+  const handleResolveComplaint = () => {
     if (!resolution.trim()) {
-      showToast('error', 'Vui lòng nhập kết luận thanh tra');
+      showToast('error', 'Vui lòng nhập Kết luận thanh tra Cấp 1');
       return;
     }
     if (!processingComplaint) return;
 
-    setComplaints(prev => prev.map(c =>
-      c.id === processingComplaint.id
-        ? {
-          ...c,
-          status: 'da-dong',
-          resolution,
-          resolutionType,
-          scoreAdjustment: resolutionType === 'adjust' ? scoreAdjustment : 0,
-          resolvedDate: '2026-09-04',
-          assignedTo: 'Phòng Thanh tra',
-        }
-        : c
-    ));
+    const res: ComplaintResolution = {
+      level: 1,
+      decision: resolutionType,
+      conclusion: resolution.trim(),
+      scoreAdjustment: resolutionType === 'adjust' ? Math.max(1, scoreAdjustment) : 0,
+      resolvedAt: '2026-10-12T14:00:00Z',
+    };
+
+    dispatch({
+      type: 'RESOLVE_COMPLAINT',
+      complaintId: processingComplaint.id,
+      resolution: res,
+      actor: CURRENT_USER,
+    });
 
     if (resolutionType === 'adjust') {
-      showToast('success', `Đã chấp thuận điều chỉnh +${scoreAdjustment} điểm cho ${processingComplaint.complainant} - Đơn khiếu nại đã đóng`);
+      showToast('success', `Đã ban hành quyết định Cấp 1: Chấp thuận điều chỉnh +${scoreAdjustment} điểm cho ${processingComplaint.complainant}. Điểm số và xếp loại đã được cập nhật.`);
     } else {
-      showToast('info', `Đã bác khiếu nại của ${processingComplaint.complainant} - Đơn khiếu nại đã đóng`);
+      showToast('info', `Đã ban hành quyết định Cấp 1: Bác đơn khiếu nại của ${processingComplaint.complainant}. Giữ nguyên kết quả.`);
     }
 
     setProcessingComplaint(null);
     setResolution('');
-    setResolutionType('reject');
-    setScoreAdjustment(0);
+    setResolutionType('adjust');
+    setScoreAdjustment(5);
   };
 
   const typeOptions = COMPLAINT_TYPES.map(t => ({ value: t, label: t }));
 
   const statusConfig: Record<ComplaintStatus, { label: string; variant: 'yellow' | 'blue' | 'green'; icon: React.ReactNode }> = {
-    'mo': { label: 'Đang mở', variant: 'yellow' as const, icon: <Clock size={14} /> },
-    'dang-xu-ly': { label: 'Đang xử lý', variant: 'blue' as const, icon: <AlertCircle size={14} /> },
-    'da-dong': { label: 'Đã đóng', variant: 'green' as const, icon: <CheckCircle2 size={14} /> },
+    'mo': { label: 'Đang mở (Chờ xử lý)', variant: 'yellow' as const, icon: <Clock size={14} /> },
+    'dang-xu-ly': { label: 'Đang xử lý (Thanh tra)', variant: 'blue' as const, icon: <AlertCircle size={14} /> },
+    'da-dong': { label: 'Đã có quyết định', variant: 'green' as const, icon: <CheckCircle2 size={14} /> },
   };
 
   return (
@@ -104,18 +135,31 @@ export function ComplaintModule({ isUserComplaint = false }: Props) {
               <MessageSquareWarning size={24} className="text-warning-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-neutral-900">Khiếu nại trực tuyến</h3>
-              <p className="text-sm text-neutral-500">
-                {isUserComplaint
-                  ? `Hạn nộp khiếu nại: 15/10/2026 | ${canComplain ? 'Còn thời gian khiếu nại' : 'Đã hết hạn khiếu nại'}`
-                  : 'Quản lý đơn khiếu nại từ nhân sự toàn trường'}
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  {isUserComplaint ? 'Cổng Khiếu nại Cá nhân' : 'Quản lý Khiếu nại Đánh giá (Thanh tra Cấp 1)'}
+                </h3>
+                {isUserComplaint && (
+                  <Badge variant={canComplain ? 'yellow' : 'gray'}>
+                    {canComplain ? `Còn ${remainingDays} ngày` : 'Đã hết hạn'}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-neutral-500 mt-0.5">
+                {isUserComplaint ? (
+                  <span>
+                    Thời hạn nộp khiếu nại: <strong>trước ngày 15 của tháng công bố kết quả</strong> (Hạn chót: 15/10/2026)
+                  </span>
+                ) : (
+                  <span>SLA tiếp nhận và xử lý giải quyết bước đầu: <strong>Phản hồi trong 02 ngày làm việc</strong></span>
+                )}
               </p>
             </div>
           </div>
           {isUserComplaint && (
             canComplain ? (
-              <button onClick={() => setShowForm(true)} className="btn-primary">
-                <Plus size={16} /> Tạo khiếu nại
+              <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5">
+                <Plus size={16} /> Tạo đơn khiếu nại
               </button>
             ) : (
               <Badge variant="gray"><Lock size={14} /> Đã hết hạn khiếu nại</Badge>
@@ -124,7 +168,7 @@ export function ComplaintModule({ isUserComplaint = false }: Props) {
         </div>
       </Card>
 
-      {/* Stats */}
+      {/* Stats for Inspectors */}
       {!isUserComplaint && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card className="p-5">
@@ -134,7 +178,7 @@ export function ComplaintModule({ isUserComplaint = false }: Props) {
               </div>
               <div>
                 <p className="text-2xl font-bold text-neutral-900">{complaints.filter(c => c.status === 'mo').length}</p>
-                <p className="text-sm text-neutral-500">Đang mở</p>
+                <p className="text-xs text-neutral-500">Đơn chờ thụ lý</p>
               </div>
             </div>
           </Card>
@@ -145,7 +189,7 @@ export function ComplaintModule({ isUserComplaint = false }: Props) {
               </div>
               <div>
                 <p className="text-2xl font-bold text-neutral-900">{complaints.filter(c => c.status === 'dang-xu-ly').length}</p>
-                <p className="text-sm text-neutral-500">Đang xử lý</p>
+                <p className="text-xs text-neutral-500">Đang xác minh (SLA 02 ngày)</p>
               </div>
             </div>
           </Card>
@@ -156,7 +200,7 @@ export function ComplaintModule({ isUserComplaint = false }: Props) {
               </div>
               <div>
                 <p className="text-2xl font-bold text-neutral-900">{complaints.filter(c => c.status === 'da-dong').length}</p>
-                <p className="text-sm text-neutral-500">Đã đóng</p>
+                <p className="text-xs text-neutral-500">Đã giải quyết xong</p>
               </div>
             </div>
           </Card>
@@ -166,74 +210,111 @@ export function ComplaintModule({ isUserComplaint = false }: Props) {
       {/* Complaints List */}
       <Card className="p-6">
         <SectionTitle
-          title={isUserComplaint ? "Khiếu nại của tôi" : "Danh sách khiếu nại"}
-          subtitle="Tổng hợp đơn khiếu nại"
+          title={isUserComplaint ? "Danh sách đơn khiếu nại của bạn" : "Danh sách đơn khiếu nại toàn trường"}
+          subtitle={`${complaints.length} đơn được ghi nhận trên hệ thống`}
           icon={<MessageSquareWarning size={18} />}
         />
-        <div className="space-y-3">
-          {complaints.map(c => (
-            <div key={c.id} className={`p-4 rounded-xl border transition-shadow ${c.status === 'mo' ? 'border-warning-200 bg-warning-50/30' : c.status === 'dang-xu-ly' ? 'border-primary-200 bg-primary-50/30' : 'border-neutral-200'} hover:shadow-sm`}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className="p-2 rounded-lg bg-neutral-100 flex-shrink-0">
-                    <FileText size={18} className="text-neutral-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-neutral-800">{c.id}</span>
-                      <Badge variant={statusConfig[c.status].variant}>
-                        {statusConfig[c.status].icon} {statusConfig[c.status].label}
-                      </Badge>
-                    </div>
-                    <p className="text-sm font-medium text-neutral-700">{c.type}</p>
-                    <p className="text-sm text-neutral-600 mt-1 line-clamp-2">{c.reason}</p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-neutral-500">
-                      <span>Người nộp: {c.complainant}</span>
-                      <span>Đơn vị: {c.unit}</span>
-                      <span>Ngày: {c.submittedDate}</span>
-                      {c.assignedTo && <span>Phụ trách: {c.assignedTo}</span>}
-                    </div>
-                    {c.evidenceName && (
-                      <div className="flex items-center gap-1.5 mt-2 text-xs text-primary-600">
-                        <Upload size={12} />
-                        <span>{c.evidenceName}</span>
-                      </div>
-                    )}
-                    {/* Resolution display for closed complaints */}
-                    {c.status === 'da-dong' && c.resolution && (
-                      <div className="mt-3 p-3 rounded-lg bg-neutral-50 border border-neutral-200">
-                        <p className="text-xs font-semibold text-neutral-700 mb-1">Kết luận thanh tra:</p>
-                        <p className="text-xs text-neutral-600">{c.resolution}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant={c.resolutionType === 'adjust' ? 'green' : 'red'}>
-                            {c.resolutionType === 'adjust' ? `Chấp thuận (+${c.scoreAdjustment}đ)` : 'Bác khiếu nại'}
-                          </Badge>
-                          {c.resolvedDate && <span className="text-xs text-neutral-400">Ngày ban hành: {c.resolvedDate}</span>}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Process button for Thanh Tra */}
-                {!isUserComplaint && c.status === 'mo' && (
-                  <button
-                    onClick={() => setProcessingComplaint(c)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors flex-shrink-0"
-                  >
-                    <Gavel size={14} /> Xử lý đơn
-                  </button>
-                )}
-              </div>
+        <div className="space-y-3 pt-2">
+          {complaints.length === 0 ? (
+            <div className="text-center py-8 text-neutral-400 text-sm">
+              Chưa có đơn khiếu nại nào được ghi nhận.
             </div>
-          ))}
+          ) : (
+            complaints.map(c => (
+              <div
+                key={c.id}
+                className={`p-4 rounded-xl border transition-shadow ${c.status === 'mo' ? 'border-warning-200 bg-warning-50/20' : c.status === 'dang-xu-ly' ? 'border-primary-200 bg-primary-50/20' : 'border-neutral-200 bg-white'} hover:shadow-sm`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="p-2.5 rounded-lg bg-neutral-100 flex-shrink-0 text-neutral-600">
+                      <FileText size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-bold text-neutral-900">{c.id}</span>
+                        <Badge variant={statusConfig[c.status].variant}>
+                          {statusConfig[c.status].label}
+                        </Badge>
+                        {c.responseDueDate && c.status !== 'da-dong' && (
+                          <Badge variant="blue">
+                            <Clock size={12} className="mr-1 inline" /> Hạn phản hồi: {c.responseDueDate}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-neutral-800">{c.type}</p>
+                      <p className="text-xs text-neutral-600 mt-1 leading-relaxed">{c.reason}</p>
+
+                      <div className="flex flex-wrap items-center gap-4 mt-2.5 text-xs text-neutral-500">
+                        <span>Người nộp: <strong className="text-neutral-700">{c.complainant}</strong></span>
+                        <span>Đơn vị: {c.unit}</span>
+                        <span>Ngày gửi: {c.submittedDate}</span>
+                        {c.assignedTo && <span>Cán bộ thụ lý: <strong>{c.assignedTo}</strong></span>}
+                      </div>
+
+                      {c.evidenceName && (
+                        <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded bg-neutral-100 text-xs text-primary-700 font-medium">
+                          <Upload size={12} />
+                          <span>Minh chứng đính kèm: {c.evidenceName}</span>
+                        </div>
+                      )}
+
+                      {/* Resolution details */}
+                      {c.status === 'da-dong' && c.resolution && (
+                        <div className="mt-3 p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-bold text-neutral-800 uppercase tracking-wider">
+                              Quyết định giải quyết Cấp 1 (Thanh tra)
+                            </span>
+                            <Badge variant={c.resolutionType === 'adjust' ? 'green' : 'red'}>
+                              {c.resolutionType === 'adjust' ? `Chấp thuận (+${c.scoreAdjustment}đ)` : 'Bác đơn'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-neutral-700 leading-relaxed font-medium">
+                            {c.resolution}
+                          </p>
+                          {c.resolvedDate && (
+                            <p className="text-[11px] text-neutral-400 mt-1.5">
+                              Thời điểm ban hành quyết định: {new Date(c.resolvedDate).toLocaleDateString('vi-VN')}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions for Inspector */}
+                  {!isUserComplaint && c.status !== 'da-dong' && (
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      {c.status === 'mo' ? (
+                        <button
+                          onClick={() => handleStartProcess(c)}
+                          className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1"
+                        >
+                          <Gavel size={14} /> Thụ lý & Xử lý
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setProcessingComplaint(c)}
+                          className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1"
+                        >
+                          <Gavel size={14} /> Ra quyết định Cấp 1
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </Card>
 
-      {/* Complaint Form Modal */}
+      {/* Modal Tạo đơn khiếu nại */}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
-        title="Tạo khiếu nại"
+        title="Tạo đơn khiếu nại kết quả đánh giá"
         size="md"
         footer={
           <>
@@ -245,160 +326,143 @@ export function ComplaintModule({ isUserComplaint = false }: Props) {
         }
       >
         <div className="space-y-4">
+          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+            <Clock size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <span>Thời hạn khiếu nại kết quả: <strong>trước ngày 15 của tháng công bố</strong>. Đơn sẽ được Phòng Thanh tra thụ lý và có phản hồi trong vòng 02 ngày làm việc.</span>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Loại khiếu nại <span className="text-danger-500">*</span></label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Loại khiếu nại <span className="text-danger-500">*</span>
+            </label>
             <Select
               value={complaintType}
               onChange={setComplaintType}
               options={typeOptions}
-              placeholder="Chọn loại khiếu nại..."
+              placeholder="Chọn nội dung khiếu nại..."
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Lý do chi tiết <span className="text-danger-500">*</span></label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Nội dung & Lý do khiếu nại chi tiết <span className="text-danger-500">*</span>
+            </label>
             <textarea
+              rows={4}
               value={complaintReason}
               onChange={e => setComplaintReason(e.target.value)}
-              rows={5}
-              placeholder="Nhập lý do khiếu nại chi tiết..."
-              className="input resize-none"
+              placeholder="Nêu rõ sản phẩm, điểm số hoặc lỗi vi phạm bạn đề nghị xem xét lại..."
+              className="input w-full"
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Đính kèm minh chứng</label>
-            <button
-              onClick={() => setEvidenceName('Minh_chung_' + Date.now() + '.pdf')}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-300 hover:border-primary-400 hover:bg-primary-50 transition-colors text-sm text-neutral-600 w-full"
-            >
-              <Upload size={16} />
-              {evidenceName || 'Tải lên file minh chứng (PDF, Docs, Image)'}
-            </button>
-          </div>
-          <div className="p-3 rounded-lg bg-primary-50 border border-primary-200 flex items-start gap-2">
-            <AlertCircle size={16} className="text-primary-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-primary-700">
-              Khiếu nại sẽ được gửi trực tiếp đến Phòng Thanh tra để xử lý.
-              Hạn nộp khiếu nại: 15/10/2026 (15 ngày của tháng đầu quý sau).
-            </p>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Tên file hoặc liên kết tài liệu minh chứng <span className="text-danger-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={evidenceName}
+              onChange={e => setEvidenceName(e.target.value)}
+              placeholder="Ví dụ: Minh_chung_xac_nhan_SP04.pdf hoặc link bài báo..."
+              className="input w-full"
+            />
           </div>
         </div>
       </Modal>
 
-      {/* Process Complaint Modal - Biên bản xử lý khiếu nại */}
+      {/* Modal Xử lý Thanh tra Cấp 1 */}
       <Modal
         open={processingComplaint !== null}
         onClose={() => setProcessingComplaint(null)}
-        title="Biên bản xử lý khiếu nại"
-        size="lg"
+        title="Ban hành Quyết định Giải quyết Khiếu nại (Cấp 1)"
+        size="md"
         footer={
           <>
             <button onClick={() => setProcessingComplaint(null)} className="btn-secondary">Hủy</button>
-            <button onClick={handleProcessComplaint} className="btn-primary">
-              <Gavel size={16} /> Ban hành quyết định
+            <button onClick={handleResolveComplaint} className="btn-primary">
+              <Check size={16} /> Ban hành quyết định
             </button>
           </>
         }
       >
         {processingComplaint && (
           <div className="space-y-4">
-            {/* Summary of complaint */}
-            <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200">
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Tóm tắt nội dung khiếu nại</p>
-              <div className="space-y-1.5">
-                <div className="flex gap-2">
-                  <span className="text-xs text-neutral-500 w-24 flex-shrink-0">Mã đơn:</span>
-                  <span className="text-sm font-medium text-neutral-800">{processingComplaint.id}</span>
+            <div className="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-xs text-neutral-500">Đơn khiếu nại</p>
+                  <p className="text-sm font-bold text-neutral-800">{processingComplaint.id} - {processingComplaint.complainant} ({processingComplaint.unit})</p>
                 </div>
-                <div className="flex gap-2">
-                  <span className="text-xs text-neutral-500 w-24 flex-shrink-0">Người nộp:</span>
-                  <span className="text-sm text-neutral-700">{processingComplaint.complainant} ({processingComplaint.unit})</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-xs text-neutral-500 w-24 flex-shrink-0">Loại:</span>
-                  <span className="text-sm text-neutral-700">{processingComplaint.type}</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-xs text-neutral-500 w-24 flex-shrink-0">Nội dung:</span>
-                  <span className="text-sm text-neutral-600">{processingComplaint.reason}</span>
-                </div>
-                {processingComplaint.evidenceName && (
-                  <div className="flex gap-2">
-                    <span className="text-xs text-neutral-500 w-24 flex-shrink-0">Minh chứng:</span>
-                    <span className="text-sm text-primary-600">{processingComplaint.evidenceName}</span>
-                  </div>
-                )}
+                <Badge variant="blue">
+                  <Clock size={12} className="mr-1 inline" /> SLA: 02 ngày làm việc
+                </Badge>
               </div>
+              <p className="text-xs text-neutral-600 mt-2"><strong>Nội dung:</strong> {processingComplaint.reason}</p>
+              {processingComplaint.evidenceName && (
+                <p className="text-xs text-primary-600 mt-1"><strong>Minh chứng:</strong> {processingComplaint.evidenceName}</p>
+              )}
             </div>
 
-            {/* Resolution input */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Kết luận thanh tra & Giải trình <span className="text-danger-500">*</span>
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                Hình thức giải quyết <span className="text-danger-500">*</span>
               </label>
-              <textarea
-                value={resolution}
-                onChange={e => setResolution(e.target.value)}
-                rows={4}
-                placeholder="Nhập kết luận thanh tra và giải trình chi tiết..."
-                className="input resize-none"
-              />
-            </div>
-
-            {/* Resolution type radio */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Quyết định</label>
-              <div className="space-y-2">
-                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${resolutionType === 'reject' ? 'border-danger-400 bg-danger-50' : 'border-neutral-200 hover:bg-neutral-50'}`}>
+              <div className="grid grid-cols-2 gap-3">
+                <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${resolutionType === 'adjust' ? 'border-primary-500 bg-primary-50/50 text-primary-900 font-semibold' : 'border-neutral-200 hover:bg-neutral-50'}`}>
                   <input
                     type="radio"
-                    name="resolution"
-                    checked={resolutionType === 'reject'}
-                    onChange={() => setResolutionType('reject')}
-                    className="w-4 h-4 text-danger-600"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-800">Bác khiếu nại</p>
-                    <p className="text-xs text-neutral-500">Không chấp nhận nội dung khiếu nại, giữ nguyên kết quả đánh giá</p>
-                  </div>
-                </label>
-                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${resolutionType === 'adjust' ? 'border-success-400 bg-success-50' : 'border-neutral-200 hover:bg-neutral-50'}`}>
-                  <input
-                    type="radio"
-                    name="resolution"
+                    name="resType"
                     checked={resolutionType === 'adjust'}
                     onChange={() => setResolutionType('adjust')}
-                    className="w-4 h-4 text-success-600"
+                    className="text-primary-600"
                   />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-neutral-800">Chấp thuận điều chỉnh điểm</p>
-                    <p className="text-xs text-neutral-500">Chấp nhận khiếu nại, điều chỉnh điểm cho nhân sự</p>
-                  </div>
-                  {resolutionType === 'adjust' && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={0}
-                        max={20}
-                        value={scoreAdjustment}
-                        onChange={e => setScoreAdjustment(Math.min(20, Math.max(0, parseInt(e.target.value) || 0)))}
-                        className="input w-20 text-center font-semibold"
-                        placeholder="+5"
-                      />
-                      <span className="text-sm text-neutral-500">điểm</span>
-                    </div>
-                  )}
+                  <span>Chấp thuận & Điều chỉnh điểm</span>
+                </label>
+
+                <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${resolutionType === 'reject' ? 'border-danger-500 bg-danger-50/50 text-danger-900 font-semibold' : 'border-neutral-200 hover:bg-neutral-50'}`}>
+                  <input
+                    type="radio"
+                    name="resType"
+                    checked={resolutionType === 'reject'}
+                    onChange={() => setResolutionType('reject')}
+                    className="text-danger-600"
+                  />
+                  <span>Bác đơn khiếu nại</span>
                 </label>
               </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-primary-50 border border-primary-200 flex items-start gap-2">
-              <AlertCircle size={16} className="text-primary-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-primary-700">
-                Khi ban hành quyết định, trạng thái đơn sẽ chuyển thành "Đã đóng",
-                {resolutionType === 'adjust'
-                  ? ` điểm của ${processingComplaint.complainant} sẽ được cộng thêm ${scoreAdjustment} điểm và lưu vết.`
-                  : ' kết quả đánh giá được giữ nguyên.'}
-              </p>
+            {resolutionType === 'adjust' && (
+              <div className="p-3.5 rounded-lg bg-success-50 border border-success-200 animate-slide-up">
+                <label className="block text-xs font-semibold text-success-800 mb-1.5">
+                  Số điểm điều chỉnh bổ sung (Cộng thêm)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={scoreAdjustment}
+                    onChange={e => setScoreAdjustment(Math.max(1, parseInt(e.target.value) || 0))}
+                    className="input w-24 text-center font-bold text-success-700"
+                  />
+                  <span className="text-xs text-success-700 font-medium">điểm (Tự động cập nhật tổng điểm và tính lại bậc xếp loại)</span>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold text-neutral-700 mb-1.5">
+                Kết luận thanh tra Cấp 1 <span className="text-danger-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                value={resolution}
+                onChange={e => setResolution(e.target.value)}
+                placeholder="Căn cứ vào kết quả thẩm tra tài liệu minh chứng bổ sung, Phòng Thanh tra kết luận..."
+                className="input w-full"
+              />
             </div>
           </div>
         )}

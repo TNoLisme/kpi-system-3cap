@@ -98,36 +98,73 @@ export const PRODUCT_CATEGORIES = [
 
 export const MY_PRODUCTS: ProductItem[] = [
   {
-    id: 'p001', category: 'Báo cáo chuyên đề', categoryCode: 'SP01',
-    contribution: 15, completedDate: '2026-07-15',
+    id: 'p001', userId: 'u001', category: 'Báo cáo chuyên đề', categoryCode: 'SP01',
+    contribution: 15, completedDate: '2026-10-02',
     evidenceName: 'Bao_cao_chuyen_de_Q3.pdf', evidenceType: 'file',
     status: 'da-duyet', maxScore: 10, actualScore: 9,
   },
   {
-    id: 'p002', category: 'Đề án quản lý', categoryCode: 'SP02',
-    contribution: 20, completedDate: '2026-08-02',
+    id: 'p002', userId: 'u001', category: 'Đề án quản lý', categoryCode: 'SP02',
+    contribution: 20, completedDate: '2026-10-03',
     evidenceName: 'De_an_quan_ly_2026.pdf', evidenceType: 'file',
     status: 'da-duyet', maxScore: 15, actualScore: 14,
   },
   {
-    id: 'p003', category: 'Bài báo khoa học', categoryCode: 'SP04',
-    contribution: 25, completedDate: '2026-08-20',
+    id: 'p003', userId: 'u001', category: 'Bài báo khoa học', categoryCode: 'SP04',
+    contribution: 25, completedDate: '2026-10-04',
     evidenceName: 'https://journal.edu.vn/article/123', evidenceType: 'link',
     status: 'cho-duyet', maxScore: 15,
   },
   {
-    id: 'p004', category: 'Hội thảo/Tập huấn', categoryCode: 'SP06',
-    contribution: 10, completedDate: '2026-08-28',
+    id: 'p004', userId: 'u001', category: 'Hội thảo/Tập huấn', categoryCode: 'SP06',
+    contribution: 10, completedDate: '2026-10-04',
     evidenceName: 'Bao_cao_hoi_thao.pdf', evidenceType: 'file',
     status: 'cho-duyet', maxScore: 10,
   },
   {
-    id: 'p005', category: 'Đề tài nghiên cứu', categoryCode: 'SP07',
-    contribution: 30, completedDate: '2026-09-01',
+    id: 'p005', userId: 'u001', category: 'Đề tài nghiên cứu', categoryCode: 'SP07',
+    contribution: 30, completedDate: '2026-10-05',
     evidenceName: 'De_tai_NC_2026.pdf', evidenceType: 'file',
     status: 'yeu-cau-sua', maxScore: 20,
-    revisionFeedback: 'Minh chứng file PDF bị mờ, thiếu chữ ký xác nhận của ban chủ nhiệm đề tài. Vui lòng bổ sung bản scan rõ nét trước ngày 10/09.',
+    revisionFeedback: 'Minh chứng file PDF bị mờ, thiếu chữ ký xác nhận của ban chủ nhiệm đề tài. Vui lòng bổ sung bản scan rõ nét trước ngày 10/10.',
     revisionFrom: 'Trưởng phòng Đào tạo',
+  },
+  // Sản phẩm của các nhân sự khác phục vụ duyệt
+  {
+    id: 'p010_1', userId: 'u010', category: 'Báo cáo chuyên môn', categoryCode: 'SP01',
+    contribution: 20, completedDate: '2026-10-02',
+    evidenceName: 'Bao_cao_pdt_u010.pdf', evidenceType: 'file',
+    status: 'cho-duyet', maxScore: 20, actualScore: 19,
+  },
+  {
+    id: 'p010_2', userId: 'u010', category: 'Hệ thống quản lý điểm', categoryCode: 'SP02',
+    contribution: 30, completedDate: '2026-10-02',
+    evidenceName: 'https://diem.ueb.edu.vn/report', evidenceType: 'link',
+    status: 'cho-duyet', maxScore: 30, actualScore: 29,
+  },
+  {
+    id: 'p011_1', userId: 'u011', category: 'Bài báo tạp chí', categoryCode: 'SP04',
+    contribution: 25, completedDate: '2026-10-03',
+    evidenceName: 'Minh_chung_SP04.pdf', evidenceType: 'file',
+    status: 'cho-duyet', maxScore: 20, actualScore: 18,
+  },
+  {
+    id: 'p012_1', userId: 'u012', category: 'Bài giảng điện tử', categoryCode: 'SP05',
+    contribution: 35, completedDate: '2026-10-01',
+    evidenceName: 'Bai_giang_Dung.pdf', evidenceType: 'file',
+    status: 'cho-duyet', maxScore: 30, actualScore: 28,
+  },
+  {
+    id: 'p013_1', userId: 'u013', category: 'Bài giảng du lịch bền vững', categoryCode: 'SP05',
+    contribution: 30, completedDate: '2026-10-02',
+    evidenceName: 'Bai_giang_ban_sua.pdf', evidenceType: 'file',
+    status: 'cho-duyet', maxScore: 25, actualScore: 23,
+  },
+  {
+    id: 'p014_1', userId: 'u014', category: 'Đề án cải cách tiền lương', categoryCode: 'SP02',
+    contribution: 40, completedDate: '2026-10-04',
+    evidenceName: 'De_an_tien_luong.pdf', evidenceType: 'file',
+    status: 'da-duyet', maxScore: 40, actualScore: 38,
   },
 ];
 
@@ -154,7 +191,7 @@ export const PENDING_TICKETS: AssessmentTicket[] = [
     id: 't001', userId: 'u010', userName: 'Trần Thị Bình', userPosition: 'Chuyên viên',
     unit: 'Phòng Đào tạo', period: 'Q3-2026', status: 'pending-l1',
     totalProducts: 5, totalScore: 78, maxScore: 100,
-    submittedDate: '2026-09-01', violations: [], flagCeiling: false,
+    submittedDate: '2026-09-01', violations: [], innovationCtPoints: 0, innovationUnits: 0, approvalHistory: [], flagCeiling: false,
     classification: null, roundedScore: null,
   },
   {
@@ -163,13 +200,13 @@ export const PENDING_TICKETS: AssessmentTicket[] = [
     totalProducts: 4, totalScore: 65, maxScore: 100,
     submittedDate: '2026-09-01', violations: [
       { id: 'v101', code: 'TĐ1', description: 'Đi muộn 2 ngày', evidenceName: 'cham_cong.pdf', recordedBy: 'Trưởng phòng', date: '2026-08-10' },
-    ], flagCeiling: true, classification: null, roundedScore: null,
+    ], innovationCtPoints: 0, innovationUnits: 0, approvalHistory: [], flagCeiling: true, classification: null, roundedScore: null,
   },
   {
     id: 't003', userId: 'u012', userName: 'Phạm Thu Dung', userPosition: 'Giảng viên',
     unit: 'Khoa Du lịch', period: 'Q3-2026', status: 'pending-l2',
     totalProducts: 6, totalScore: 85, maxScore: 120,
-    submittedDate: '2026-08-30', violations: [], flagCeiling: false,
+    submittedDate: '2026-08-30', violations: [], innovationCtPoints: 0, innovationUnits: 0, approvalHistory: [], flagCeiling: false,
     classification: null, roundedScore: null,
   },
   {
@@ -178,13 +215,13 @@ export const PENDING_TICKETS: AssessmentTicket[] = [
     totalProducts: 5, totalScore: 92, maxScore: 120,
     submittedDate: '2026-08-28', violations: [
       { id: 'v201', code: 'TĐ7', description: 'Sai sót trong bài giảng', evidenceName: 'bai_giang.pdf', recordedBy: 'Trưởng Khoa', date: '2026-08-18' },
-    ], flagCeiling: true, classification: null, roundedScore: null,
+    ], innovationCtPoints: 0, innovationUnits: 0, approvalHistory: [], flagCeiling: true, classification: null, roundedScore: null,
   },
   {
     id: 't005', userId: 'u014', userName: 'Hoàng Thị Lan', userPosition: 'Chuyên viên',
     unit: 'Phòng TCNS', period: 'Q3-2026', status: 'pending-l1',
     totalProducts: 7, totalScore: 88, maxScore: 100,
-    submittedDate: '2026-09-02', violations: [], flagCeiling: false,
+    submittedDate: '2026-09-02', violations: [], innovationCtPoints: 0, innovationUnits: 0, approvalHistory: [], flagCeiling: false,
     classification: null, roundedScore: null,
   },
 ];
@@ -343,8 +380,10 @@ export function getClassificationLabel(c: Classification): string {
   const labels: Record<Classification, string> = {
     A1: 'A1 - Xuất sắc',
     A2: 'A2 - Xuất sắc',
+    A3: 'A3 - Xuất sắc',
     B1: 'B1 - Tốt',
     B2: 'B2 - Tốt',
+    B3: 'B3 - Tốt',
     C: 'C - Khá',
     D: 'D - Trung bình',
   };
@@ -354,9 +393,11 @@ export function getClassificationLabel(c: Classification): string {
 export function getClassificationColor(c: Classification): string {
   const colors: Record<Classification, string> = {
     A1: 'bg-success-100 text-success-700',
-    A2: 'bg-success-100 text-success-700',
+    A2: 'A2 - Xuất sắc',
+    A3: 'A3 - Xuất sắc',
     B1: 'bg-primary-100 text-primary-700',
-    B2: 'bg-primary-100 text-primary-700',
+    B2: 'B2 - Tốt',
+    B3: 'B3 - Tốt',
     C: 'bg-warning-100 text-warning-700',
     D: 'bg-danger-100 text-danger-700',
   };
@@ -428,3 +469,5 @@ export const GIANG_VIEN_GROUPS = [
     { id: 'gv5a', label: 'Đóng góp HPT', maxScore: 20, score: 10 },
   ]},
 ];
+
+export const DEMO_CURRENT_DATE = '2026-10-10';
